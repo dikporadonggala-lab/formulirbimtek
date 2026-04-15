@@ -4,424 +4,811 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulir BIMTEK Donggala</title>
-    <!-- Memuat Tailwind CSS langsung dari CDN -->
+    <!-- Memuat Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat html2pdf untuk mencetak PDF asli -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Memuat SheetJS untuk Ekspor Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
     <style>
-        /* CSS KHUSUS CETAK (PRINT) */
-        @media print {
-            html, body {
-                height: auto !important;
-                min-height: auto !important;
-                overflow: visible !important;
-            }
-            body * {
-                visibility: hidden;
-            }
-            #print-area, #print-area * {
-                visibility: visible;
-            }
-            #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 0 !important;
-                background-color: white !important;
-                box-shadow: none !important;
-                min-height: 0 !important;
-                height: auto !important;
-            }
-            @page {
-                size: A4;
-                margin: 5mm 15mm;
-            }
-            .no-print {
-                display: none !important;
-            }
-        }
+        #panel-kanan::-webkit-scrollbar { height: 8px; width: 8px; }
+        #panel-kanan::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen flex flex-col md:flex-row">
+<body class="bg-gray-100 font-sans min-h-screen relative overflow-x-hidden">
 
-    <!-- PANEL KIRI: FORM INPUT -->
-    <div class="w-full md:w-1/3 bg-white shadow-xl flex flex-col no-print z-10 h-screen sticky top-0">
-        <div class="p-6 bg-blue-600 text-white flex items-center gap-3 shrink-0">
-            <!-- Icon FileText -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>
-            <h1 class="text-xl font-bold">Input Data Peserta</h1>
-        </div>
-        
-        <div class="p-6 flex-1 overflow-y-auto space-y-4">
-            <div class="grid grid-cols-1 gap-4">
-                <!-- Input Fields -->
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">1. Nama Lengkap</label>
-                    <input type="text" data-bind="nama" placeholder="Contoh: Budi Santoso, S.Pd" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+    <!-- === TAMPILAN UTAMA (FORM PESERTA) === -->
+    <div id="app-container" class="min-h-screen flex flex-col md:flex-row relative">
+        <!-- MODAL KONFIRMASI -->
+        <div id="modal-konfirmasi" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center transition-opacity">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-md transform scale-100 transition-transform">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Langkah Pengiriman Data</h3>
+                <div class="text-gray-600 mb-6 text-sm space-y-2">
+                    <p>Sistem akan memandu Anda mengirim data ke WhatsApp Panitia:</p>
+                    <ol class="list-decimal pl-5 space-y-1 font-medium text-gray-700">
+                        <li>Sistem akan <b>Mengunduh Formulir sebagai PDF (1 Halaman Penuh)</b> ke perangkat Anda.</li>
+                        <li>WhatsApp panitia akan <b>terbuka otomatis</b>. Silakan lampirkan file PDF tersebut ke ruang obrolan.</li>
+                    </ol>
                 </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">2. No. Registrasi</label>
-                    <input type="text" data-bind="noReg" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                <div class="flex justify-end gap-3">
+                    <button id="btn-batal" class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors">
+                        Batal
+                    </button>
+                    <button id="btn-lanjut" class="px-5 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                        Simpan PDF & Kirim WA
+                    </button>
                 </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">3. NIP</label>
-                    <input type="text" data-bind="nip" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">4. NIK</label>
-                    <input type="text" data-bind="nik" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">5. Pangkat / Golongan</label>
-                    <input type="text" data-bind="pangkatGol" placeholder="Contoh: Penata Muda / III.a" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                
-                <div class="flex gap-2">
-                    <div class="flex flex-col flex-1">
-                        <label class="text-sm font-semibold text-gray-700 mb-1">6. Tempat Lahir</label>
-                        <input type="text" data-bind="tempatLahir" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                    </div>
-                    <div class="flex flex-col flex-1">
-                        <label class="text-sm font-semibold text-gray-700 mb-1">7. Tanggal Lahir</label>
-                        <input type="date" data-bind="tanggalLahir" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                    </div>
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">8. Jenis Kelamin</label>
-                    <select data-bind="jenisKelamin" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="Laki-laki">Laki-laki</option>
-                        <option value="Perempuan">Perempuan</option>
-                    </select>
-                </div>
-
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">9. Agama</label>
-                    <select data-bind="agama" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="Islam">Islam</option>
-                        <option value="Kristen Protestan">Kristen Protestan</option>
-                        <option value="Katolik">Katolik</option>
-                        <option value="Hindu">Hindu</option>
-                        <option value="Buddha">Buddha</option>
-                        <option value="Konghucu">Konghucu</option>
-                    </select>
-                </div>
-
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">10. Pendidikan Terakhir</label>
-                    <input type="text" data-bind="pendidikan" placeholder="Contoh: S1" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">11. Jurusan</label>
-                    <input type="text" data-bind="jurusan" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">12. Alamat Rumah</label>
-                    <textarea data-bind="alamat" rows="2" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-                </div>
-
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">13. Email Aktif</label>
-                    <input type="email" data-bind="email" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">14. NPWP</label>
-                    <input type="text" data-bind="npwp" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">15. No WA</label>
-                    <input type="text" data-bind="noWa" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">16. Jabatan</label>
-                    <input type="text" data-bind="jabatan" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">17. Instansi / Sekolah</label>
-                    <input type="text" data-bind="instansi" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">18. Alamat Instansi/Sekolah</label>
-                    <textarea data-bind="alamatInstansi" rows="2" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-                </div>
-
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">19. Kecamatan</label>
-                    <select data-bind="kecamatan" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">- Pilih Kecamatan -</option>
-                        <option value="Banawa">Banawa</option>
-                        <option value="Banawa Tengah">Banawa Tengah</option>
-                        <option value="Banawa Selatan">Banawa Selatan</option>
-                        <option value="Rio Pakava">Rio Pakava</option>
-                        <option value="Pinembani">Pinembani</option>
-                        <option value="Tanantovea">Tanantovea</option>
-                        <option value="Labuan">Labuan</option>
-                        <option value="Sindue">Sindue</option>
-                        <option value="Sindue Tombusabora">Sindue Tombusabora</option>
-                        <option value="Sindue Tobata">Sindue Tobata</option>
-                        <option value="Sirenja">Sirenja</option>
-                        <option value="Balaesang">Balaesang</option>
-                        <option value="Balaesang Tanjung">Balaesang Tanjung</option>
-                        <option value="Dampelas">Dampelas</option>
-                        <option value="Sojol">Sojol</option>
-                        <option value="Sojol Utara">Sojol Utara</option>
-                    </select>
-                </div>
-                
-                <hr class="my-4 border-gray-300" />
-                
-                <!-- Bagian Foto -->
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">Upload Pas Foto (3x4)</label>
-                    <label class="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 overflow-hidden" id="foto-container-left">
-                        <div class="flex flex-col items-center justify-center pt-5 pb-6" id="foto-placeholder-left">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-gray-400 mb-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            <p class="text-sm text-gray-500">Klik untuk unggah foto</p>
-                        </div>
-                        <img id="foto-preview-left" class="h-full object-contain hidden" />
-                        <input type="file" id="foto-input" class="hidden" accept="image/*" />
-                    </label>
-                </div>
-
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">Nama BIMTEK</label>
-                    <input type="text" data-bind="namaBimtek" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">Tanggal Pendaftaran</label>
-                    <input type="date" data-bind="tanggalDaftar" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-sm font-semibold text-gray-700 mb-1">Tempat Pelaksanaan (Opsional)</label>
-                    <input type="text" data-bind="tempatPelaksanaan" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div class="flex gap-2">
-                    <div class="flex flex-col flex-1">
-                        <label class="text-sm font-semibold text-gray-700 mb-1">Waktu Mulai</label>
-                        <input type="date" data-bind="waktuPelaksanaanMulai" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                    </div>
-                    <div class="flex flex-col flex-1">
-                        <label class="text-sm font-semibold text-gray-700 mb-1">Waktu Selesai</label>
-                        <input type="date" data-bind="waktuPelaksanaanSelesai" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
-                    </div>
-                </div>
-
             </div>
         </div>
-        
-        <div class="p-4 border-t bg-gray-50 shrink-0">
-            <button onclick="window.print()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                <!-- Icon Printer -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                Cetak / Simpan PDF
-            </button>
+
+        <!-- PANEL KIRI: FORM INPUT -->
+        <div id="panel-kiri" class="w-full md:w-1/3 bg-white shadow-xl flex flex-col z-10 h-screen sticky top-0">
+            <div class="p-6 bg-blue-600 text-white flex items-center gap-3 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>
+                <h1 class="text-xl font-bold">Input Data Peserta</h1>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto flex flex-col">
+                <!-- BAGIAN TARIK DATA GOOGLE SHEETS -->
+                <div class="p-6 bg-yellow-50 border-b border-yellow-200 shrink-0">
+                    <label class="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Ketik NIP Anda tanpa Spasi
+                    </label>
+                    <div class="flex gap-2 mt-2">
+                        <input type="text" id="input-cari-nip" placeholder="Contoh: 198001011999031001" class="flex-1 border border-yellow-300 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500 text-sm" />
+                        <button type="button" id="btn-cari-data" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md font-semibold transition-colors text-sm shadow">
+                            Cari
+                        </button>
+                    </div>
+                </div>
+
+                <!-- INPUT FIELDS -->
+                <div class="p-6 space-y-4">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">1. Nama Lengkap</label>
+                            <input type="text" data-bind="nama" placeholder="Contoh: Budi Santoso, S.Pd" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col relative">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">2. No. Registrasi (Otomatis)</label>
+                            <input type="text" data-bind="noReg" readonly class="bg-gray-100 text-gray-600 font-bold border border-gray-300 rounded-md p-2 cursor-not-allowed" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">3. NIP</label>
+                            <input type="text" data-bind="nip" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">4. NIK</label>
+                            <input type="text" data-bind="nik" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">5. Pangkat / Golongan</label>
+                            <input type="text" data-bind="pangkatGol" placeholder="Contoh: Penata Muda / III.a" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <div class="flex flex-col flex-1">
+                                <label class="text-sm font-semibold text-gray-700 mb-1">6. Tempat Lahir</label>
+                                <input type="text" data-bind="tempatLahir" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                            </div>
+                            <div class="flex flex-col flex-1">
+                                <label class="text-sm font-semibold text-gray-700 mb-1">7. Tanggal Lahir</label>
+                                <input type="date" data-bind="tanggalLahir" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">8. Jenis Kelamin</label>
+                            <select data-bind="jenisKelamin" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="Laki-laki">Laki-laki</option>
+                                <option value="Perempuan">Perempuan</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">9. Agama</label>
+                            <select data-bind="agama" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="Islam">Islam</option>
+                                <option value="Kristen Protestan">Kristen Protestan</option>
+                                <option value="Katolik">Katolik</option>
+                                <option value="Hindu">Hindu</option>
+                                <option value="Buddha">Buddha</option>
+                                <option value="Konghucu">Konghucu</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">10. Pendidikan Terakhir</label>
+                            <input type="text" data-bind="pendidikan" placeholder="Contoh: S1" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">11. Jurusan</label>
+                            <input type="text" data-bind="jurusan" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">12. Alamat Rumah</label>
+                            <textarea data-bind="alamat" rows="2" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">13. NPWP</label>
+                            <input type="text" data-bind="npwp" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1 text-blue-700">14. No WA (Penghubung Data)*</label>
+                            <input type="text" data-bind="noWa" placeholder="Contoh: 08123456789" class="border border-blue-400 bg-blue-50 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">15. Jabatan</label>
+                            <input type="text" data-bind="jabatan" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">16. Instansi / Sekolah</label>
+                            <input type="text" data-bind="instansi" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">17. Alamat Instansi/Sekolah</label>
+                            <textarea data-bind="alamatInstansi" rows="2" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">18. Kecamatan</label>
+                            <select data-bind="kecamatan" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">- Pilih Kecamatan -</option>
+                                <option value="Banawa">Banawa</option>
+                                <option value="Banawa Tengah">Banawa Tengah</option>
+                                <option value="Banawa Selatan">Banawa Selatan</option>
+                                <option value="Rio Pakava">Rio Pakava</option>
+                                <option value="Pinembani">Pinembani</option>
+                                <option value="Tanantovea">Tanantovea</option>
+                                <option value="Labuan">Labuan</option>
+                                <option value="Sindue">Sindue</option>
+                                <option value="Sindue Tombusabora">Sindue Tombusabora</option>
+                                <option value="Sindue Tobata">Sindue Tobata</option>
+                                <option value="Sirenja">Sirenja</option>
+                                <option value="Balaesang">Balaesang</option>
+                                <option value="Balaesang Tanjung">Balaesang Tanjung</option>
+                                <option value="Dampelas">Dampelas</option>
+                                <option value="Sojol">Sojol</option>
+                                <option value="Sojol Utara">Sojol Utara</option>
+                            </select>
+                        </div>
+                        
+                        <hr class="my-4 border-gray-300" />
+                        
+                        <!-- Bagian Foto -->
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">Upload Pas Foto (3x4)</label>
+                            <label class="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 overflow-hidden" id="foto-container-left">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6" id="foto-placeholder-left">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-gray-400 mb-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    <p class="text-sm text-gray-500">Klik untuk unggah foto</p>
+                                </div>
+                                <img id="foto-preview-left" class="h-full object-contain hidden" />
+                                <input type="file" id="foto-input" class="hidden" accept="image/*" />
+                            </label>
+                        </div>
+
+                        <!-- BAGIAN TANDA TANGAN -->
+                        <div class="flex flex-col bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <label class="text-sm font-semibold text-gray-700 mb-2 flex items-center justify-between">
+                                <span>Tanda Tangan Peserta (Langsung)</span>
+                                <span class="text-xs font-normal text-blue-600 bg-blue-100 px-2 py-0.5 rounded">Gores di bawah</span>
+                            </label>
+                            <div class="border border-gray-300 bg-white rounded-md overflow-hidden relative" style="height: 150px;">
+                                <canvas id="signature-pad" width="400" height="150" class="w-full h-full touch-none cursor-crosshair"></canvas>
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" id="clear-signature" class="flex-1 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded text-sm font-semibold transition-colors">
+                                    Bersihkan
+                                </button>
+                            </div>
+                        </div>
+
+                        <hr class="my-4 border-gray-300" />
+
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">Nama BIMTEK</label>
+                            <input type="text" data-bind="namaBimtek" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">Tanggal Pendaftaran</label>
+                            <input type="date" data-bind="tanggalDaftar" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-700 mb-1">Tempat Pelaksanaan (Opsional)</label>
+                            <input type="text" data-bind="tempatPelaksanaan" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex flex-col flex-1">
+                                <label class="text-sm font-semibold text-gray-700 mb-1">Waktu Mulai</label>
+                                <input type="date" data-bind="waktuPelaksanaanMulai" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                            </div>
+                            <div class="flex flex-col flex-1">
+                                <label class="text-sm font-semibold text-gray-700 mb-1">Waktu Selesai</label>
+                                <input type="date" data-bind="waktuPelaksanaanSelesai" class="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t bg-gray-50 shrink-0 relative">
+                <!-- Loading indicator -->
+                <div id="loading-overlay" class="absolute inset-0 bg-white/90 hidden items-center justify-center z-20 rounded-lg">
+                    <div class="flex flex-col items-center">
+                        <svg class="animate-spin h-6 w-6 text-blue-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span class="text-blue-600 font-semibold text-sm">Menyiapkan PDF...</span>
+                    </div>
+                </div>
+                
+                <button id="btn-tampil-modal" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    Kirim Data
+                </button>
+            </div>
+        </div>
+
+        <!-- PANEL KANAN: PREVIEW DOKUMEN -->
+        <div id="panel-kanan" class="w-full md:w-2/3 bg-gray-200 overflow-auto p-4 flex justify-center items-start">
+            
+            <div id="print-area" class="bg-white shadow-2xl relative text-black box-border overflow-hidden shrink-0" style="width: 794px; height: 1123px; padding: 50px 60px;">
+                
+                <!-- KOP SURAT -->
+                <div class="flex items-center justify-between pb-[5px]">
+                    <div class="w-[90px] h-[110px] flex items-center justify-center shrink-0">
+                        <img src="https://i.ibb.co.com/5xhN0cm1/Logo-Donggala.png" alt="Logo Donggala" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                        <div class="hidden w-[80px] h-[100px] border-2 border-black flex items-center justify-center text-[11px] text-center font-bold">LOGO<br/>DONGGALA</div>
+                    </div>
+
+                    <div class="text-center flex-1 px-[15px]">
+                        <h2 class="text-[20px] font-bold tracking-wide">PEMERINTAH KABUPATEN DONGGALA</h2>
+                        <h1 class="text-[22px] font-bold mt-[2px] mb-[6px] leading-tight">DINAS PENDIDIKAN, PEMUDA DAN OLAHRAGA</h1>
+                        <p class="text-[14px]">Alamat: Jalan Pusat Pemerintahan Gunung Bale, Banawa Kab. Donggala</p>
+                        <p class="text-[14px]">Website: <span class="text-[#00008B] font-semibold">disdikporadonggala.blogspot.com</span></p>
+                    </div>
+                </div>
+
+                <!-- GARIS BAWAH KOP -->
+                <div class="border-b-[3px] border-black mt-[2px]"></div>
+                <div class="border-b-[1px] border-black mt-[2px] mb-[20px]"></div>
+
+                <!-- JUDUL -->
+                <div class="text-center mb-[20px]">
+                    <h3 class="text-[18px] font-bold underline mb-[2px]">FORMULIR BIODATA PESERTA</h3>
+                    <h4 class="text-[16px] font-bold uppercase"><span id="prev-namaBimtek">BIMTEK PENDAMPINGAN DAPODIK JENJANG SD</span> TAHUN <span id="prev-tahun">2025</span></h4>
+                </div>
+
+                <div class="mb-[15px] flex flex-col gap-[4px]">
+                    <div class="flex text-[15px]">
+                        <span class="w-[180px] font-semibold">Tempat Pelaksanaan</span>
+                        <span class="mr-[8px]">:</span>
+                        <span class="font-semibold" id="prev-tempatPelaksanaan">ZAMRUD HOTEL Palu</span>
+                    </div>
+                    <div class="flex text-[15px]">
+                        <span class="w-[180px] font-semibold">Waktu Pelaksanaan</span>
+                        <span class="mr-[8px]">:</span>
+                        <span class="font-semibold" id="prev-waktuPelaksanaan">................... s.d. ...................</span>
+                    </div>
+                </div>
+
+                <!-- ISI FORM -->
+                <div class="relative">
+                    <table class="w-full text-left border-collapse">
+                        <tbody id="table-body">
+                            <!-- Baris akan dirender via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- FOTO & TTD -->
+                <div class="mt-[20px] flex justify-between items-end pl-[40px]">
+                    <!-- Foto Frame -->
+                    <div class="w-[113px] h-[151px] border-[2px] border-black flex items-center justify-center bg-gray-50 overflow-hidden shrink-0" id="foto-container-right">
+                        <div class="text-center text-gray-400" id="foto-placeholder-right">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-[5px] opacity-50"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            <span class="text-[12px]">FOTO<br/>3 x 4</span>
+                        </div>
+                        <img id="foto-preview-right" class="w-full h-full object-cover hidden" />
+                    </div>
+
+                    <!-- TTD -->
+                    <div class="w-[250px] text-center text-[15px]">
+                        <p>Donggala, <span id="prev-tanggalDaftar">...........................</span></p>
+                        <p class="mt-[5px]">Peserta,</p>
+                        
+                        <div class="h-[80px] relative flex justify-center items-center">
+                            <img id="prev-signature-image" class="absolute max-h-full max-w-full object-contain hidden" alt="Tanda Tangan" />
+                        </div> 
+
+                        <p class="font-bold underline uppercase" id="prev-nama-ttd">( ................................... )</p>
+                        <p class="mt-[2px]" id="prev-nip-ttd"></p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- PANEL KANAN: PREVIEW DOKUMEN -->
-    <div class="w-full md:w-2/3 bg-gray-200 overflow-y-auto p-4 md:p-8 flex justify-center">
-        <!-- Kontainer Kertas A4 -->
-        <div id="print-area" class="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-2xl p-8 md:p-12 relative text-black text-sm md:text-base">
-            
-            <!-- KOP SURAT -->
-            <div class="flex items-center justify-between border-b-4 border-black pb-4 mb-1 border-double">
-                <!-- Logo Donggala -->
-                <div class="w-24 h-28 flex items-center justify-center shrink-0">
-                    <img 
-                        src="https://i.ibb.co.com/5xhN0cm1/Logo-Donggala.png" 
-                        alt="Logo Donggala" 
-                        class="w-full h-full object-contain"
-                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                    />
-                    <!-- Fallback kalau gambar gagal diload -->
-                    <div class="hidden w-20 h-24 border-2 border-black flex items-center justify-center text-xs text-center font-bold">
-                        LOGO<br/>DONGGALA
-                    </div>
+    <!-- === DASHBOARD ADMIN === -->
+    <div id="admin-container" class="min-h-screen bg-gray-100 hidden p-6">
+        <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-8">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Dashboard Panitia</h2>
+                    <p class="text-gray-500 text-sm">Rekapitulasi Data & Status Peserta</p>
                 </div>
-
-                <div class="text-center flex-1 px-4">
-                    <h2 class="text-xl font-bold tracking-wide">PEMERINTAH KABUPATEN DONGGALA</h2>
-                    <h1 class="text-[20px] md:text-[21px] font-bold tracking-wide mt-1 mb-2 leading-tight">DINAS PENDIDIKAN, PEMUDA DAN OLAHRAGA</h1>
-                    <p class="text-sm">Alamat: Jalan Pusat Pemerintahan Gunung Bale, Banawa Kab. Donggala</p>
-                    <p class="text-sm">Website: <span class="text-[#00008B] font-semibold">disdikporadonggala.blogspot.com</span></p>
-                </div>
-            </div>
-            <div class="border-b-[1px] border-black mb-4"></div>
-
-            <!-- JUDUL -->
-            <div class="text-center mb-4">
-                <h3 class="text-lg font-bold underline mb-1">FORMULIR BIODATA PESERTA</h3>
-                <h4 class="text-md font-bold uppercase"><span id="prev-namaBimtek">BIMTEK PENDAMPINGAN DAPODIK JENJANG SD</span> TAHUN <span id="prev-tahun">2025</span></h4>
+                <button id="btn-admin-logout" class="bg-red-100 text-red-600 hover:bg-red-200 px-4 py-2 rounded-lg font-semibold transition-colors">
+                    Tutup / Keluar
+                </button>
             </div>
 
-            <div class="mb-4 flex flex-col gap-1">
-                <div class="flex">
-                    <span class="w-40 font-semibold">Tempat Pelaksanaan</span>
-                    <span class="mr-2">:</span>
-                    <span class="font-semibold" id="prev-tempatPelaksanaan">ZAMRUD HOTEL Palu</span>
+            <!-- PENGATURAN EXCEL -->
+            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex flex-col md:flex-row items-center gap-4">
+                <div class="flex-1 w-full">
+                    <label class="text-sm font-bold text-blue-800 block mb-1">Pengaturan Nama BIMTEK untuk File Excel:</label>
+                    <input type="text" id="admin-nama-bimtek" placeholder="Contoh: PENDAMPINGAN DAPODIK JENJANG SD" class="w-full border border-blue-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 bg-white" />
                 </div>
-                <div class="flex">
-                    <span class="w-40 font-semibold">Waktu Pelaksanaan</span>
-                    <span class="mr-2">:</span>
-                    <span class="font-semibold" id="prev-waktuPelaksanaan">................... s.d. ...................</span>
+                <div class="shrink-0 flex gap-2 w-full md:w-auto mt-2 md:mt-0">
+                    <button id="btn-admin-refresh" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors shadow">
+                        Tarik Data
+                    </button>
+
+                    <button id="btn-admin-excel" class="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors shadow">
+                        Download Excel
+                    </button>
                 </div>
             </div>
 
-            <!-- ISI FORM -->
-            <div class="relative">
+            <!-- Tabel Data -->
+            <div class="overflow-x-auto bg-gray-50 rounded-lg border border-gray-200">
                 <table class="w-full text-left border-collapse">
-                    <tbody id="table-body">
-                        <!-- Baris akan dirender via JavaScript -->
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-700 uppercase text-xs">
+                            <th class="p-3 border-b border-gray-300 w-12 text-center">No</th>
+                            <th class="p-3 border-b border-gray-300">Nama / NIP</th>
+                            <th class="p-3 border-b border-gray-300">Instansi / Unit Kerja</th>
+                            <th class="p-3 border-b border-gray-300 text-center">Status</th>
+                            <th class="p-3 border-b border-gray-300 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table-body" class="text-sm">
+                        <tr>
+                            <td colspan="5" class="text-center p-6 text-gray-500 italic">Klik "Tarik Data" untuk memuat daftar peserta.</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
-
-            <!-- FOTO & TTD -->
-            <div class="mt-4 flex justify-between items-end pl-8">
-                <!-- Foto Frame sejajar dengan nama di area tanda tangan -->
-                <div class="w-[3cm] h-[4cm] border-2 border-black flex items-center justify-center bg-gray-50 overflow-hidden shrink-0" id="foto-container-right">
-                    <div class="text-center text-gray-400" id="foto-placeholder-right">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 mx-auto mb-1 opacity-50"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                        <span class="text-xs">FOTO<br/>3 x 4</span>
-                    </div>
-                    <img id="foto-preview-right" class="w-full h-full object-cover hidden" />
-                </div>
-
-                <!-- TTD -->
-                <div class="w-64 text-center">
-                    <p>Donggala, <span id="prev-tanggalDaftar">...........................</span></p>
-                    <p class="mt-1">Peserta,</p>
-                    <div class="h-20"></div> <!-- Ruang TTD -->
-                    <p class="font-bold underline uppercase" id="prev-nama-ttd">( ................................... )</p>
-                    <p class="mt-1" id="prev-nip-ttd"></p>
-                </div>
-            </div>
-
         </div>
     </div>
 
+    <!-- TOMBOL AKSES ADMIN RAHASIA -->
+    <button id="btn-admin-login" class="fixed bottom-2 right-2 text-xs text-gray-400 hover:text-gray-600 opacity-50 hover:opacity-100 p-2 z-50 transition-all font-mono tracking-widest no-print">
+        Login Panitia
+    </button>
+
     <!-- SCRIPT LOGIKA -->
     <script>
-        // State awal
+        // =========================================================
+        // URL GOOGLE APPS SCRIPT ANDA MASUKKAN DI SINI:
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxrYlZkXl2pposQDE_r8BxPglO0FwQe-aMXzYjlQeR1-7v-aiKwBVAKgW_i3m5Ky9mtcw/exec";
+        // =========================================================
+
+        const generatedNoReg = 'REG-' + Math.floor(100000 + Math.random() * 900000);
+
         const state = {
-            nama: '', noReg: '', nip: '', nik: '', pangkatGol: '', tempatLahir: '', tanggalLahir: '',
-            jenisKelamin: 'Laki-laki', agama: 'Islam', pendidikan: '', jurusan: '', alamat: '', email: '',
+            nama: '', noReg: generatedNoReg, nip: '', nik: '', pangkatGol: '', tempatLahir: '', tanggalLahir: '',
+            jenisKelamin: 'Laki-laki', agama: 'Islam', pendidikan: '', jurusan: '', alamat: '',
             npwp: '', noWa: '', jabatan: '', instansi: '', alamatInstansi: '', kecamatan: '',
             namaBimtek: 'BIMTEK PENDAMPINGAN DAPODIK JENJANG SD',
             tempatPelaksanaan: 'ZAMRUD HOTEL Palu', waktuPelaksanaanMulai: '', waktuPelaksanaanSelesai: '',
             tanggalDaftar: new Date().toISOString().split('T')[0]
         };
 
-        // Format Tanggal Indonesia
         function formatDate(dateStr) {
             if (!dateStr) return '';
             const date = new Date(dateStr);
             return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
         }
 
-        // Definisi baris tabel
         const tableRows = [
-            { key: 'nama', label: 'NAMA' },
-            { key: 'noReg', label: 'NO REGISTRASI' },
-            { key: 'nip', label: 'NIP' },
-            { key: 'nik', label: 'NIK' },
-            { key: 'pangkatGol', label: 'PANGKAT / GOL' },
-            { key: 'tempatLahir', label: 'TEMPAT LAHIR' },
-            { key: 'tanggalLahir', label: 'TANGGAL LAHIR', isDate: true },
-            { key: 'jenisKelamin', label: 'JENIS KELAMIN' },
-            { key: 'agama', label: 'AGAMA' },
-            { key: 'pendidikan', label: 'PENDIDIKAN TERAKHIR' },
-            { key: 'jurusan', label: 'JURUSAN' },
-            { key: 'alamat', label: 'ALAMAT RUMAH' },
-            { key: 'email', label: 'EMAIL AKTIF' },
-            { key: 'npwp', label: 'NPWP' },
-            { key: 'noWa', label: 'NO WA' },
-            { key: 'jabatan', label: 'JABATAN' },
-            { key: 'instansi', label: 'INSTANSI/SEKOLAH' },
-            { key: 'alamatInstansi', label: 'ALAMAT INSTANSI/SEKOLAH' },
-            { key: 'kecamatan', label: 'KECAMATAN' }
+            { key: 'nama', label: 'NAMA' }, { key: 'noReg', label: 'NO REGISTRASI' }, { key: 'nip', label: 'NIP' },
+            { key: 'nik', label: 'NIK' }, { key: 'pangkatGol', label: 'PANGKAT / GOL' }, { key: 'tempatLahir', label: 'TEMPAT LAHIR' },
+            { key: 'tanggalLahir', label: 'TANGGAL LAHIR', isDate: true }, { key: 'jenisKelamin', label: 'JENIS KELAMIN' },
+            { key: 'agama', label: 'AGAMA' }, { key: 'pendidikan', label: 'PENDIDIKAN TERAKHIR' }, { key: 'jurusan', label: 'JURUSAN' },
+            { key: 'alamat', label: 'ALAMAT RUMAH' }, { key: 'npwp', label: 'NPWP' }, { key: 'noWa', label: 'NO WA' },
+            { key: 'jabatan', label: 'JABATAN' }, { key: 'instansi', label: 'INSTANSI/SEKOLAH' },
+            { key: 'alamatInstansi', label: 'ALAMAT INSTANSI/SEKOLAH' }, { key: 'kecamatan', label: 'KECAMATAN' }
         ];
 
-        // Render Pratinjau
         function renderPreview() {
-            // Render Tabel
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
             tableRows.forEach((row, index) => {
                 let value = state[row.key];
                 if (row.isDate) value = formatDate(value);
-                
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="align-top py-1 w-8 text-sm font-medium">${index + 1}.</td>
-                    <td class="align-top py-1 w-56 text-sm font-medium">${row.label}</td>
-                    <td class="align-top py-1 w-4 text-sm font-medium">:</td>
-                    <td class="align-top py-1 text-sm font-semibold text-gray-800 uppercase whitespace-pre-wrap">${value || ' '}</td>
+                    <td class="align-top py-[4px] w-[30px] text-[14px] font-medium">${index + 1}.</td>
+                    <td class="align-top py-[4px] w-[200px] text-[14px] font-medium">${row.label}</td>
+                    <td class="align-top py-[4px] w-[15px] text-[14px] font-medium">:</td>
+                    <td class="align-top py-[4px] text-[14px] font-semibold text-gray-800 uppercase whitespace-pre-wrap leading-snug">${value || ' '}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            // Update Field Khusus Header & TTD
             document.getElementById('prev-tempatPelaksanaan').textContent = state.tempatPelaksanaan || '-';
             document.getElementById('prev-namaBimtek').textContent = state.namaBimtek || '...................................................';
-            
             const txtMulai = state.waktuPelaksanaanMulai ? formatDate(state.waktuPelaksanaanMulai) : '...................';
             const txtSelesai = state.waktuPelaksanaanSelesai ? formatDate(state.waktuPelaksanaanSelesai) : '...................';
             document.getElementById('prev-waktuPelaksanaan').textContent = `${txtMulai} s.d. ${txtSelesai}`;
-
-            const tahunMulai = state.waktuPelaksanaanMulai ? new Date(state.waktuPelaksanaanMulai).getFullYear() : '2025';
-            document.getElementById('prev-tahun').textContent = tahunMulai;
-
+            document.getElementById('prev-tahun').textContent = state.waktuPelaksanaanMulai ? new Date(state.waktuPelaksanaanMulai).getFullYear() : '2025';
             document.getElementById('prev-tanggalDaftar').textContent = formatDate(state.tanggalDaftar) || '...........................';
             document.getElementById('prev-nama-ttd').textContent = state.nama || '( ................................... )';
             document.getElementById('prev-nip-ttd').textContent = state.nip ? 'NIP. ' + state.nip : '';
         }
 
-        // Inisialisasi Event Listener
-        document.addEventListener('DOMContentLoaded', () => {
-            const inputs = document.querySelectorAll('[data-bind]');
-            
-            // Set nilai awal & event listener
-            inputs.forEach(input => {
-                const key = input.getAttribute('data-bind');
-                if (state[key] !== undefined) {
-                    input.value = state[key];
+        function setupSignaturePad() {
+            const canvas = document.getElementById('signature-pad');
+            const ctx = canvas.getContext('2d');
+            const clearBtn = document.getElementById('clear-signature');
+            const previewImg = document.getElementById('prev-signature-image');
+            let isDrawing = false;
+            const blankDataUrl = canvas.toDataURL();
+
+            ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#000000';
+
+            function getCoordinates(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+                let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+            }
+
+            function startPosition(e) { isDrawing = true; draw(e); }
+            function endPosition() { if (!isDrawing) return; isDrawing = false; ctx.beginPath(); updatePreviewSignature(); }
+            function draw(e) {
+                if (!isDrawing) return; e.preventDefault();
+                const coords = getCoordinates(e);
+                ctx.lineTo(coords.x, coords.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(coords.x, coords.y);
+            }
+
+            canvas.addEventListener('mousedown', startPosition); canvas.addEventListener('mouseup', endPosition);
+            canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseout', endPosition);
+            canvas.addEventListener('touchstart', startPosition, { passive: false });
+            canvas.addEventListener('touchend', endPosition); canvas.addEventListener('touchmove', draw, { passive: false });
+
+            clearBtn.addEventListener('click', () => { ctx.clearRect(0, 0, canvas.width, canvas.height); updatePreviewSignature(); });
+
+            function updatePreviewSignature() {
+                const dataUrl = canvas.toDataURL();
+                if (dataUrl === blankDataUrl) { previewImg.classList.add('hidden'); previewImg.src = ''; } 
+                else { previewImg.src = dataUrl; previewImg.classList.remove('hidden'); }
+            }
+        }
+
+        function initKirimWA() {
+            const modal = document.getElementById('modal-konfirmasi');
+            const btnTampil = document.getElementById('btn-tampil-modal');
+            const btnBatal = document.getElementById('btn-batal');
+            const btnLanjut = document.getElementById('btn-lanjut');
+            const loadingOverlay = document.getElementById('loading-overlay');
+
+            btnTampil.addEventListener('click', () => {
+                if(!state.noWa) {
+                    alert("Mohon isi kolom No. WA terlebih dahulu agar Panitia dapat menghubungi Anda.");
+                    document.querySelector('[data-bind="noWa"]').focus();
+                    return;
+                }
+                modal.classList.remove('hidden');
+            });
+            btnBatal.addEventListener('click', () => modal.classList.add('hidden'));
+
+            btnLanjut.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                loadingOverlay.classList.remove('hidden');
+                loadingOverlay.classList.add('flex');
+                
+                // Mengirim info ke Apps Script untuk update status menjadi "Sudah Registrasi"
+                if (GAS_URL !== "" && !GAS_URL.includes("MASUKKAN_URL")) {
+                    fetch(`${GAS_URL}?action=register&nip=${encodeURIComponent(state.nip)}`).catch(e=>console.log(e));
                 }
 
-                input.addEventListener('input', (e) => {
-                    state[key] = e.target.value;
-                    renderPreview();
+                const noPanitia = "6281341006608";
+                const namaPeserta = state.nama || "Peserta Baru";
+                const noWaPeserta = state.noWa || "Belum diisi";
+                const namaGiat = state.namaBimtek || "BIMTEK";
+                
+                let pesan = `Halo Panitia,%0A%0ABerikut adalah Formulir Pendaftaran *${namaGiat}*:%0A%0A*Nama:* ${namaPeserta}%0A*No. WA Peserta:* ${noWaPeserta}%0A%0A(SAYA MELAMPIRKAN FILE PDF FORMULIR DI BAWAH INI).%0A%0ATerima kasih.`;
+
+                const element = document.getElementById('print-area');
+                const opt = {
+                    margin:       0, 
+                    filename:     `Formulir_${namaPeserta.replace(/\s+/g, '_')}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    pagebreak:    { mode: 'avoid-all' },
+                    html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
+                    jsPDF:        { unit: 'px', format: [794, 1123], orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(element).save().then(() => {
+                    loadingOverlay.classList.add('hidden');
+                    loadingOverlay.classList.remove('flex');
+
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    const waLink = isMobile ? `whatsapp://send?phone=${noPanitia}&text=${pesan}` : `https://wa.me/${noPanitia}?text=${pesan}`;
+                    setTimeout(() => window.open(waLink, '_blank'), 500);
+                }).catch(err => {
+                    console.error("Error PDF:", err);
+                    alert("Maaf, terjadi kesalahan saat membuat file PDF.");
+                    loadingOverlay.classList.add('hidden');
+                    loadingOverlay.classList.remove('flex');
                 });
             });
+        }
 
-            // Event Upload Foto
+        function initTarikData() {
+            const btnCari = document.getElementById('btn-cari-data');
+            const inputCari = document.getElementById('input-cari-nip');
+
+            btnCari.addEventListener('click', async () => {
+                const nipDicari = inputCari.value.trim();
+                if(!nipDicari) return alert("Tolong ketik NIP Anda terlebih dahulu!");
+                if (GAS_URL === "" || GAS_URL.includes("MASUKKAN_URL")) return alert("URL Google Apps Script belum dimasukkan di dalam file HTML.");
+
+                const originalText = btnCari.innerText;
+                btnCari.innerText = "Mencari...";
+                btnCari.disabled = true;
+
+                try {
+                    const response = await fetch(`${GAS_URL}?action=getDetail&nip=${encodeURIComponent(nipDicari)}`);
+                    const result = await response.json();
+
+                    if(result.status === 'success') {
+                        const data = result.data;
+                        for(let key in data) {
+                            if(state[key] !== undefined && data[key] !== "") {
+                                state[key] = data[key];
+                                const inputEl = document.querySelector(`[data-bind="${key}"]`);
+                                if(inputEl) inputEl.value = data[key];
+                            }
+                        }
+                        renderPreview();
+                        alert("Berhasil! Data biodata peserta ditemukan dan langsung diisikan.");
+                    } else {
+                        alert("Maaf, data peserta dengan NIP tersebut tidak ditemukan di Google Sheets.");
+                    }
+                } catch(error) {
+                    alert("Gagal menghubungi Google Sheets. Pastikan akses internet Anda stabil, URL Apps Script sudah benar, dan Deployment sudah diperbarui.");
+                } finally {
+                    btnCari.innerText = originalText;
+                    btnCari.disabled = false;
+                }
+            });
+        }
+
+        // ========================================================
+        // LOGIKA ADMIN DASHBOARD (FITUR STATUS & DOWNLOAD PDF)
+        // ========================================================
+        let adminDataList = [];
+
+        function initAdminPanel() {
+            const btnLogin = document.getElementById('btn-admin-login');
+            const btnLogout = document.getElementById('btn-admin-logout');
+            const btnRefresh = document.getElementById('btn-admin-refresh');
+            const btnExcel = document.getElementById('btn-admin-excel');
+            const appContainer = document.getElementById('app-container');
+            const adminContainer = document.getElementById('admin-container');
+            
+            document.getElementById('admin-nama-bimtek').value = "PENDAMPINGAN DAPODIK JENJANG SD";
+
+            btnLogin.addEventListener('click', () => {
+                const pass = prompt("Masukkan Password Panitia:");
+                if(pass === "panitia2025") {
+                    appContainer.classList.add('hidden');
+                    btnLogin.classList.add('hidden');
+                    adminContainer.classList.remove('hidden');
+                    fetchSemuaPeserta();
+                } else if(pass !== null) {
+                    alert("Password Salah!");
+                }
+            });
+
+            btnLogout.addEventListener('click', () => {
+                adminContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                btnLogin.classList.remove('hidden');
+            });
+
+            btnRefresh.addEventListener('click', fetchSemuaPeserta);
+            btnExcel.addEventListener('click', generateExcel);
+        }
+
+        async function fetchSemuaPeserta() {
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-blue-600 font-semibold animate-pulse">Menarik data peserta dari Google Sheets...</td></tr>';
+            
+            if (GAS_URL === "" || GAS_URL.includes("MASUKKAN_URL")) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-red-500">Error: URL GAS belum di-setting!</td></tr>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${GAS_URL}?action=getAll`);
+                const result = await response.json();
+                
+                if(result.status === 'success') {
+                    adminDataList = result.data;
+                    renderAdminTable();
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-red-500">Gagal menarik data.</td></tr>';
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-red-500">Gagal koneksi ke server!</td></tr>';
+            }
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = '';
+            
+            if(adminDataList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-gray-500">Belum ada data peserta.</td></tr>';
+                return;
+            }
+            
+            adminDataList.forEach((p, i) => {
+                // Cek status
+                const isRegistered = p.status === 'Sudah Registrasi';
+                const statusHtml = isRegistered 
+                    ? `<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">SUDAH</span>`
+                    : `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">BELUM</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-200 hover:bg-gray-100 bg-white';
+                tr.innerHTML = `
+                    <td class="p-3 text-center border-x border-gray-200">${i + 1}</td>
+                    <td class="p-3 border-x border-gray-200"><span class="font-bold text-gray-800">${p.nama || '-'}</span><br><span class="text-gray-500 text-xs">NIP. ${p.nip || '-'}</span></td>
+                    <td class="p-3 border-x border-gray-200">${p.instansi || '-'}</td>
+                    <td class="p-3 text-center border-x border-gray-200">${statusHtml}</td>
+                    <td class="p-3 text-center border-x border-gray-200">
+                        <button onclick="downloadPdfAdmin('${p.nip}')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition-colors">
+                            Unduh PDF
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Fungsi Admin untuk menghasilkan PDF salah satu peserta
+        window.downloadPdfAdmin = function(nip) {
+            const p = adminDataList.find(x => String(x.nip) === String(nip));
+            if (!p) return alert("Data tidak ditemukan.");
+
+            // 1. Ubah state sementara untuk di render
+            for(let key in p) {
+                if(state[key] !== undefined) state[key] = p[key];
+            }
+            // Kosongkan TTD & Foto (Karena admin tidak menyimpan data gambar)
+            document.getElementById('prev-signature-image').classList.add('hidden');
+            document.getElementById('foto-preview-right').classList.add('hidden');
+            document.getElementById('foto-placeholder-right').classList.remove('hidden');
+
+            renderPreview();
+
+            // 2. Buat PDF
+            const element = document.getElementById('print-area');
+            const opt = {
+                margin:       0, 
+                filename:     `Data_Peserta_${p.nama.replace(/\s+/g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                pagebreak:    { mode: 'avoid-all' },
+                html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF:        { unit: 'px', format: [794, 1123], orientation: 'portrait' }
+            };
+
+            const originalBtnText = event.target.innerText;
+            event.target.innerText = "Memproses...";
+            event.target.disabled = true;
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                event.target.innerText = originalBtnText;
+                event.target.disabled = false;
+                // Bersihkan form setelah diunduh (agar pratinjau tidak tertinggal data orang)
+                window.location.reload();
+            });
+        };
+
+        function generateExcel() {
+            if(adminDataList.length === 0) return alert("Data kosong. Silakan Tarik Data Terbaru terlebih dahulu!");
+
+            const wb = XLSX.utils.book_new();
+            const tahunIni = new Date().getFullYear();
+            
+            const adminInputBimtek = document.getElementById('admin-nama-bimtek').value.trim();
+            const txtBimtek = (adminInputBimtek || "PENDAMPINGAN DAPODIK JENJANG SD").toUpperCase();
+            
+            const kopSurat = [
+                ["PEMERINTAH KABUPATEN DONGGALA"],
+                ["DINAS PENDIDIKAN, PEMUDA DAN OLAHRAGA"],
+                ["Alamat: Jalan Pusat Pemerintahan Gunung Bale, Banawa Kab. Donggala"],
+                ["Website: disdikporadonggala.blogspot.com"],
+                []
+            ];
+
+            // SHEET 1: DAFTAR HADIR
+            const ws1_data = [...kopSurat, ["DAFTAR HADIR PESERTA"], [`BIMTEK ${txtBimtek} TAHUN ${tahunIni}`], [], ["Hari / Tanggal", ": .............................................................."], ["Tempat", `: ${state.tempatPelaksanaan}`], [], ["No", "Nama", "NIP", "Jabatan", "Instansi/Unit Kerja", "TTD"]];
+            adminDataList.forEach((p, i) => {
+                let ttdFormat = (i % 2 === 0) ? `${i + 1}. ` : `                        ${i + 1}. `;
+                ws1_data.push([ i + 1, p.nama, p.nip, p.jabatan, p.instansi, ttdFormat ]);
+            });
+            const ws1 = XLSX.utils.aoa_to_sheet(ws1_data);
+            ws1["!merges"] = [ { s: {r:0, c:0}, e: {r:0, c:5} }, { s: {r:1, c:0}, e: {r:1, c:5} }, { s: {r:2, c:0}, e: {r:2, c:5} }, { s: {r:3, c:0}, e: {r:3, c:5} }, { s: {r:5, c:0}, e: {r:5, c:5} }, { s: {r:6, c:0}, e: {r:6, c:5} } ];
+            ws1["!cols"] = [{wch:5}, {wch:30}, {wch:25}, {wch:25}, {wch:35}, {wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws1, "Daftar Hadir Peserta");
+
+            // SHEET 2: DAFTAR PENERIMAAN ATK
+            const ws2_data = [...kopSurat, ["DAFTAR PENERIMAAN ATK"], [`BIMTEK ${txtBimtek} TAHUN ${tahunIni}`], [], ["Hari / Tanggal", ": .............................................................."], ["Tempat", `: ${state.tempatPelaksanaan}`], [], ["No", "Nama", "NIP", "Jabatan", "Instansi/Unit Kerja", "TTD"]];
+            adminDataList.forEach((p, i) => {
+                let ttdFormat = (i % 2 === 0) ? `${i + 1}. ` : `                        ${i + 1}. `;
+                ws2_data.push([ i + 1, p.nama, p.nip, p.jabatan, p.instansi, ttdFormat ]);
+            });
+            const ws2 = XLSX.utils.aoa_to_sheet(ws2_data);
+            ws2["!merges"] = [ { s: {r:0, c:0}, e: {r:0, c:5} }, { s: {r:1, c:0}, e: {r:1, c:5} }, { s: {r:2, c:0}, e: {r:2, c:5} }, { s: {r:3, c:0}, e: {r:3, c:5} }, { s: {r:5, c:0}, e: {r:5, c:5} }, { s: {r:6, c:0}, e: {r:6, c:5} } ];
+            ws2["!cols"] = [{wch:5}, {wch:30}, {wch:25}, {wch:25}, {wch:35}, {wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws2, "Daftar Penerimaan ATK");
+
+            // SHEET 3: DAFTAR TERIMA UANG SAKU
+            const ws3_data = [...kopSurat, ["DAFTAR TERIMA UANG SAKU"], [`BIMTEK ${txtBimtek} TAHUN ${tahunIni}`], [], ["No", "Nama", "NIP", "Instansi/Unit kerja", "Jumlah Diterima", "TTD"]];
+            adminDataList.forEach((p, i) => {
+                let ttdFormat = (i % 2 === 0) ? `${i + 1}. ` : `                        ${i + 1}. `;
+                ws3_data.push([ i + 1, p.nama, p.nip, p.instansi, "", ttdFormat ]);
+            });
+            const ws3 = XLSX.utils.aoa_to_sheet(ws3_data);
+            ws3["!merges"] = [ { s: {r:0, c:0}, e: {r:0, c:5} }, { s: {r:1, c:0}, e: {r:1, c:5} }, { s: {r:2, c:0}, e: {r:2, c:5} }, { s: {r:3, c:0}, e: {r:3, c:5} }, { s: {r:5, c:0}, e: {r:5, c:5} }, { s: {r:6, c:0}, e: {r:6, c:5} } ];
+            ws3["!cols"] = [{wch:5}, {wch:30}, {wch:25}, {wch:35}, {wch:20}, {wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws3, "Daftar Terima Uang Saku");
+
+            XLSX.writeFile(wb, `Data_Rekapitulasi_Bimtek_${tahunIni}.xlsx`);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-bind]').forEach(input => {
+                const key = input.getAttribute('data-bind');
+                if (state[key] !== undefined) input.value = state[key];
+                input.addEventListener('input', (e) => { state[key] = e.target.value; renderPreview(); });
+            });
+
             document.getElementById('foto-input').addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         const imgUrl = event.target.result;
-                        
-                        // Panel Kiri
                         document.getElementById('foto-placeholder-left').classList.add('hidden');
-                        const imgLeft = document.getElementById('foto-preview-left');
-                        imgLeft.src = imgUrl;
-                        imgLeft.classList.remove('hidden');
+                        document.getElementById('foto-preview-left').src = imgUrl; 
+                        document.getElementById('foto-preview-left').classList.remove('hidden');
 
-                        // Panel Kanan
                         document.getElementById('foto-placeholder-right').classList.add('hidden');
-                        const imgRight = document.getElementById('foto-preview-right');
-                        imgRight.src = imgUrl;
-                        imgRight.classList.remove('hidden');
+                        document.getElementById('foto-preview-right').src = imgUrl; 
+                        document.getElementById('foto-preview-right').classList.remove('hidden');
                     };
                     reader.readAsDataURL(file);
                 }
             });
 
-            // Render perdana
             renderPreview();
+            setupSignaturePad();
+            initKirimWA();
+            initTarikData();
+            initAdminPanel(); 
         });
     </script>
 </body>
