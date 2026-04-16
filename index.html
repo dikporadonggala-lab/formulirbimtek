@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulir BIMTEK Donggala</title>
+    <!-- Memuat Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat html2pdf untuk mencetak PDF asli -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Memuat SheetJS untuk Ekspor Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
@@ -15,7 +18,7 @@
 </head>
 <body class="bg-gray-100 font-sans min-h-screen relative overflow-x-hidden">
 
-    <!-- TAMPILAN UTAMA (FORM PESERTA) -->
+    <!-- === TAMPILAN UTAMA (FORM PESERTA) === -->
     <div id="app-container" class="min-h-screen flex flex-col md:flex-row relative">
         <!-- MODAL KONFIRMASI -->
         <div id="modal-konfirmasi" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center transition-opacity">
@@ -25,8 +28,8 @@
                     <p>Sistem akan memandu Anda mengirim data ke WhatsApp Panitia:</p>
                     <ol class="list-decimal pl-5 space-y-1 font-medium text-gray-700">
                         <li>Sistem akan <b>Mengunduh Formulir sebagai PDF</b> ke perangkat Anda.</li>
-                        <li>Data dan Tanda Tangan Anda akan <b>Disimpan secara aman di server</b>.</li>
-                        <li>WhatsApp panitia akan <b>terbuka otomatis</b>. Silakan lampirkan file PDF tersebut.</li>
+                        <li>Data, Foto, dan Tanda Tangan Anda akan <b>Disimpan secara aman di server</b>.</li>
+                        <li>WhatsApp panitia akan <b>terbuka otomatis</b>. Silakan lampirkan file PDF tersebut ke ruang obrolan.</li>
                     </ol>
                 </div>
                 <div class="flex justify-end gap-3">
@@ -49,6 +52,7 @@
             </div>
             
             <div class="flex-1 overflow-y-auto flex flex-col">
+                <!-- BAGIAN TARIK DATA GOOGLE SHEETS -->
                 <div class="p-6 bg-yellow-50 border-b border-yellow-200 shrink-0">
                     <label class="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -62,6 +66,7 @@
                     </div>
                 </div>
 
+                <!-- INPUT FIELDS -->
                 <div class="p-6 space-y-4">
                     <div class="grid grid-cols-1 gap-4">
                         <div class="flex flex-col">
@@ -279,8 +284,7 @@
                 <!-- JUDUL -->
                 <div class="text-center mb-[20px]">
                     <h3 class="text-[18px] font-bold underline mb-[2px]">FORMULIR BIODATA PESERTA</h3>
-                    <h4 class="text-[16px] font-bold uppercase"><span id="prev-namaBimtek">BIMTEK PENGEMBANGAN DASHBOARD PEMANTAUAN DAN EVALUASI KINERJA SATUAN
-PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TAHUN <span id="prev-tahun">2025</span></h4>
+                    <h4 class="text-[16px] font-bold uppercase"><span id="prev-namaBimtek">BIMTEK PENDAMPINGAN DAPODIK JENJANG SD</span> TAHUN <span id="prev-tahun">2025</span></h4>
                 </div>
 
                 <div class="mb-[15px] flex flex-col gap-[4px]">
@@ -386,7 +390,7 @@ PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TA
         </div>
     </div>
 
-    <!-- TOMBOL AKSES ADMIN RAHASIA -->
+    <!-- TOMBOL AKSES ADMIN RAHASIA (DI POJOK KANAN ATAS, AGAR TIDAK MENGHALANGI TOMBOL KIRIM DATA DI HP) -->
     <button id="btn-admin-login" class="fixed top-4 right-4 text-xs text-gray-500 hover:text-gray-800 opacity-50 hover:opacity-100 bg-white px-3 py-2 rounded-lg shadow-md z-[70] transition-all font-bold tracking-widest no-print border border-gray-300">
         Login Panitia
     </button>
@@ -395,7 +399,7 @@ PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TA
     <script>
         // =========================================================
         // URL GOOGLE APPS SCRIPT ANDA MASUKKAN DI SINI:
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbz1gBHNHHR_TEGCKkhNXTdvg2Ee3gAR-UWjJfDCNECTxjxeWrEYz99B51nJx870f_hfyw/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzCDCK6QQs1nhCiK_p0_0S1F7TH7_pazZNQKnHOUubng9R_PXs5TrKnCXZX1-2z3qK3-A/exec";
         // =========================================================
 
         const generatedNoReg = 'REG-' + Math.floor(100000 + Math.random() * 900000);
@@ -517,7 +521,7 @@ PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TA
                 modal.classList.add('hidden');
                 loadingOverlay.classList.remove('hidden');
                 loadingOverlay.classList.add('flex');
-                loadingText.innerText = "Menyimpan Data dan Menyiapkan PDF...";
+                loadingText.innerText = "Menyimpan Data ke Server...";
                 
                 // Ambil Data Foto dan Tanda Tangan
                 const fotoImg = document.getElementById('foto-preview-left').src;
@@ -527,12 +531,12 @@ PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TA
                 let finalFoto = fotoImg.startsWith('data:image') ? fotoImg : "";
                 let finalTtd = (ttdDataUrl !== blankSignatureDataUrl) ? ttdDataUrl : "";
 
-                // MENGIRIM DATA STATUS + GAMBAR KE GOOGLE SHEETS
+                // MENGIRIM KESELURUHAN DATA + GAMBAR KE GOOGLE SHEETS
                 if (GAS_URL !== "" && !GAS_URL.includes("MASUKKAN_URL")) {
                     try {
                         const payload = {
                             action: 'register',
-                            nip: state.nip,
+                            ...state, // Spread isi form lengkap (nama, nip, dsb)
                             foto: finalFoto,
                             ttd: finalTtd
                         };
@@ -544,13 +548,13 @@ PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TA
                             body: JSON.stringify(payload)
                         });
                     } catch(e) {
-                        console.error("Gagal update status di Sheets", e);
+                        console.error("Gagal update data di Sheets", e);
                     }
                 }
 
                 // LANJUT PROSES CETAK PDF & WA
-                loadingText.innerText = "Membuat File PDF...";
-                const noPanitia = "6281355536961";
+                loadingText.innerText = "Menyiapkan File PDF...";
+                const noPanitia = "6281341006608";
                 const namaPeserta = state.nama || "Peserta Baru";
                 const noWaPeserta = state.noWa || "Belum diisi";
                 const namaGiat = state.namaBimtek || "BIMTEK";
@@ -706,7 +710,7 @@ PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TA
                     <td class="p-3 text-center border-x border-gray-200">
                         <button onclick="downloadPdfAdmin(this, '${p.nip}')" 
                                 class="${isRegistered ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed opacity-50'} text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition-colors"
-                                ${isRegistered ? '' : 'disabled'} title="${isRegistered ? 'Unduh PDF Formulir' : 'Peserta belum menyimpan data (belum upload foto/ttd)'}">
+                                ${isRegistered ? '' : 'disabled'} title="${isRegistered ? 'Unduh PDF Formulir Lengkap' : 'Peserta belum menyimpan formulir'}">
                             Unduh PDF
                         </button>
                     </td>
@@ -715,7 +719,7 @@ PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TA
             });
         }
 
-        // --- FUNGSI ADMIN: UNDUH PDF PESERTA SECARA SPESIFIK BESERTA FOTO DAN TTD DARI DATABASE ---
+        // --- FUNGSI ADMIN: UNDUH PDF PESERTA BESERTA FOTO DAN TTD DARI DATABASE ---
         window.downloadPdfAdmin = function(btnElement, nip) {
             const p = adminDataList.find(x => String(x.nip) === String(nip));
             if (!p) return alert("Data tidak ditemukan.");
@@ -788,8 +792,6 @@ PENDIDIKAN DAN ANALISIS RAPOR PENDIDIKAN KABUPATEN DONGGALA TAHUN 2026</span> TA
                 []
             ];
 
-            // HANYA EKSPOR YANG SUDAH REGISTRASI (OPSIONAL: bisa dihapus filternya jika ingin ekspor semua)
-            // const pesertas = adminDataList.filter(p => p.status === 'Sudah Registrasi'); 
             const pesertas = adminDataList;
 
             // SHEET 1: DAFTAR HADIR
